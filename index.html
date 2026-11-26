@@ -3762,5 +3762,112 @@ function init(){sec6();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(init,0);});else setTimeout(init,0);
 })();
 </script>
+<script id="pk6-bento">
+// BENTO GRID : แสดงหัวข้อเป็น Flash Card คลิกแล้วเปิดเป็นหน้าต่าง (modal) แสดงข้อมูลของหัวข้อนั้น
+(function(){
+  if(window.__pk6Bento) return; window.__pk6Bento=1;
+  var css=document.createElement('style');
+  css.textContent=[
+  'body:not(.bento-all) .bento-src:not(.bento-open){display:none !important;}',
+  '#rg-pick{display:none !important;}',
+  '.wrap > #rg-global{display:none !important;}', /* หน้าแรกไม่แสดงแถบวันที่ (แสดงในหน้าต่างหัวข้อแทน) */
+  '#bento{max-width:1200px;margin:18px auto 8px;padding:0 16px;}',
+  '#bento .bento-head{font-weight:800;color:#0c4a6e;font-size:1.05rem;margin:0 2px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}',
+  '#bento .bento-head small{font-weight:600;color:#64748b;font-size:.8rem;}',
+  '.bento-grid{display:grid;grid-template-columns:repeat(5,1fr);grid-auto-flow:dense;gap:14px;}',
+  '.bento-card{position:relative;border:0;text-align:left;font-family:inherit;cursor:pointer;border-radius:20px;padding:16px 16px 14px;min-height:150px;display:flex;flex-direction:column;justify-content:space-between;color:#0f172a;background:var(--bg,#e0f2fe);box-shadow:0 1px 2px rgba(15,23,42,.06),0 6px 18px rgba(15,23,42,.07);transition:transform .15s ease,box-shadow .15s ease;overflow:hidden;}',
+  '.bento-card:hover,.bento-card:focus-visible{transform:translateY(-3px);box-shadow:0 2px 4px rgba(15,23,42,.08),0 12px 28px rgba(2,132,199,.22);outline:none;}',
+  '.bento-card .bc-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}',
+  '.bento-card .bc-num{font-weight:800;font-size:1.25rem;color:var(--fg,#0369a1);background:rgba(255,255,255,.75);border-radius:12px;padding:2px 11px;line-height:1.5;}',
+  '.bento-card .bc-ico{font-size:1.6rem;line-height:1;}',
+  '.bento-card .bc-title{font-weight:700;font-size:.88rem;line-height:1.45;margin:10px 0 8px;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden;}',
+  '.bento-card .bc-go{font-size:.78rem;font-weight:700;color:var(--fg,#0369a1);opacity:.9;}',
+  '.bento-card.w2{grid-column:span 2;}.bento-card.h2{grid-row:span 2;}',
+  '.bento-card.big .bc-title{font-size:1.2rem;}',
+  '.bento-card.big .bc-num{font-size:1.6rem;}',
+  '@media(max-width:1000px){.bento-grid{grid-template-columns:repeat(3,1fr);}}','@media(max-width:620px){.bento-grid{grid-template-columns:repeat(2,1fr);}}',
+  '@media(max-width:420px){.bento-grid{gap:10px;}.bento-card{min-height:130px;padding:13px;border-radius:16px;}.bento-card .bc-title{font-size:.84rem;}}',
+  '#bento-modal{position:fixed;inset:0;z-index:1000;background:rgba(15,23,42,.58);display:none;align-items:center;justify-content:center;padding:2vh 2vw;}',
+  '#bento-modal.on{display:flex;}',
+  '#bento-modal .bm-panel{background:#f8fafc;width:min(1320px,100%);height:96vh;border-radius:18px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.35);}',
+  '#bento-modal .bm-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:linear-gradient(135deg,#0c4a6e,#0284c7);color:#fff;}',
+  '#bento-modal .bm-ttl{flex:1;font-weight:800;font-size:.95rem;line-height:1.35;}',
+  '#bento-modal .bm-x{border:0;background:rgba(255,255,255,.2);color:#fff;font-size:1.1rem;font-weight:800;width:36px;height:36px;border-radius:10px;cursor:pointer;}',
+  '#bento-modal .bm-x:hover{background:rgba(255,255,255,.35);}',
+  '#bento-modal .bm-body{flex:1;overflow:auto;padding:14px;-webkit-overflow-scrolling:touch;}',
+  '#bento-modal .bm-body > .section{margin-top:0 !important;}',
+  '#bento-modal #rg-global{margin:0 0 12px !important;top:-14px;}',
+  'body.bento-lock{overflow:hidden;}',
+  '@media(max-width:600px){#bento-modal{padding:0;}#bento-modal .bm-panel{height:100vh;border-radius:0;}#bento-modal .bm-body{padding:8px;}}'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  var STY={kpi:['#dbeafe','#1d4ed8','📊'],'1':['#e0f2fe','#0369a1','🧭'],'2':['#fee2e2','#b91c1c','📉'],'2.1':['#ffedd5','#c2410c','🗺️'],'2.2':['#fef3c7','#a16207','🎯'],
+    '3':['#ede9fe','#6d28d9','📷'],'3.1':['#fae8ff','#a21caf','⏳'],'4':['#ccfbf1','#0f766e','🔔'],'5':['#ffe4e6','#be123c','🧾'],'6':['#dcfce7','#15803d','📈'],'7':['#e2e8f0','#334155','📦'],'8':['#fecaca','#991b1b','⏱️']};
+  var cards=[];
+  function ttl(el){var t=el.querySelector('.section-title');if(!t)return '';var c=t.cloneNode(true);[].forEach.call(c.querySelectorAll('.tag,button,.date-badge'),function(x){x.remove();});return c.textContent.replace(/\s+/g,' ').trim();}
+  function build(){
+    var wrap=(document.getElementById('rg-global')||{}).parentNode||document.querySelector('.header + .wrap'); if(!wrap) return;
+    var kids=[].slice.call(wrap.children),grp=[],groups=[],seenNum=false;
+    kids.forEach(function(el){
+      if(el.id==='rg-global'||el.tagName==='SCRIPT'||el.classList.contains('rg-info')||el.classList.contains('legend-row')||el.classList.contains('footer-note')||el.id==='bento') return;
+      var isSec=el.classList.contains('section'),t=isSec?ttl(el):'',m=/^(\d+(?:\.\d+)?)\.?\s+(.*)$/.exec(t);
+      if(isSec&&m){seenNum=true;groups.push({key:m[1],num:m[1],els:[el],el:el});}
+      else if(!seenNum) grp.push(el);
+    });
+    if(grp.length) groups.unshift({key:'kpi',num:'★',els:grp,title:'สรุปตัวชี้วัดหลัก (KPI) ประเด็นสำคัญ และสัดส่วนผลการโทรนัดหมาย'});
+    var host=document.createElement('div');host.id='bento';
+    host.innerHTML='<div class="bento-head">🍱 เลือกหัวข้อที่ต้องการดู <small>คลิกการ์ดเพื่อเปิดหน้าต่างแสดงข้อมูล • เลือกช่วงวันที่ได้ในหน้าต่างของแต่ละหัวข้อ</small></div><div class="bento-grid"></div>';
+    var grid=host.querySelector('.bento-grid');
+    var seq=0;groups.forEach(function(g){if(g.key!=='kpi'){seq++;g.num=String(seq);}}); // เรียงเลข TAB ใหม่ 1,2,3,... (เลขเดิมของหัวข้อไม่เปลี่ยนในหน้าต่าง)
+    groups.forEach(function(g){
+      var st=STY[g.key]||STY['1'],b=document.createElement('button');b.type='button';b.className='bento-card';
+      b.style.setProperty('--bg',st[0]);b.style.setProperty('--fg',st[1]);
+      b.innerHTML='<div class="bc-top"><span class="bc-num"></span><span class="bc-ico">'+st[2]+'</span></div><div class="bc-title"></div><div class="bc-go">แตะเพื่อเปิดดู ▸</div>';
+      b.querySelector('.bc-num').textContent=g.num;g.btn=b;g.tEl=b.querySelector('.bc-title');
+      g.els.forEach(function(e){e.classList.add('bento-src');});
+      b.addEventListener('click',function(){open(g);});
+      grid.appendChild(b);cards.push(g);
+      function refresh(){var t=g.title||ttl(g.el).replace(/^\d+(?:\.\d+)?\.?\s+/,'');g.tEl.textContent=t.replace(/\s*สถานะ ณ วันที่.*$/,'');}
+      refresh();
+      if(g.el){var tt=g.el.querySelector('.section-title');if(tt&&window.MutationObserver)new MutationObserver(refresh).observe(tt,{childList:true,characterData:true,subtree:true});}
+    });
+    var first=kids.filter(function(e){return e.classList.contains('bento-src');})[0]||wrap.firstChild;
+    wrap.insertBefore(host,first);
+  }
+  var modal,bodyEl,titleEl,openG=null,marks=[],rgMark=null;
+  function ensureModal(){
+    if(modal) return;
+    modal=document.createElement('div');modal.id='bento-modal';
+    modal.innerHTML='<div class="bm-panel" role="dialog" aria-modal="true"><div class="bm-bar"><div class="bm-ttl"></div><button class="bm-x" type="button" aria-label="ปิด">✕</button></div><div class="bm-body"></div></div>';
+    document.body.appendChild(modal);bodyEl=modal.querySelector('.bm-body');titleEl=modal.querySelector('.bm-ttl');
+    modal.querySelector('.bm-x').addEventListener('click',close);
+    modal.addEventListener('mousedown',function(e){if(e.target===modal)close();});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&openG)close();});
+  }
+  function open(g){
+    ensureModal();if(openG) close();openG=g;marks=[];
+    rgMark=null;var rg=document.getElementById('rg-global');if(rg){rgMark=document.createComment('rg');rg.parentNode.insertBefore(rgMark,rg);bodyEl.appendChild(rg);} // แถบ 📅 เลือกช่วงวันที่ แสดงในทุกหัวข้อ
+    g.els.forEach(function(e){var c=document.createComment('bento');e.parentNode.insertBefore(c,e);marks.push(c);e.classList.add('bento-open');bodyEl.appendChild(e);});
+    titleEl.textContent=(g.key==='kpi'?'★ ':g.num+'. ')+g.tEl.textContent;
+    modal.classList.add('on');document.body.classList.add('bento-lock');bodyEl.scrollTop=0;
+    setTimeout(function(){window.dispatchEvent(new Event('resize'));},30);setTimeout(function(){window.dispatchEvent(new Event('resize'));},300);
+  }
+  function close(){
+    if(!openG) return;
+    if(rgMark){var rg=document.getElementById('rg-global');if(rg){rgMark.parentNode.insertBefore(rg,rgMark);}rgMark.remove();rgMark=null;}
+    openG.els.forEach(function(e,i){var c=marks[i];e.classList.remove('bento-open');c.parentNode.insertBefore(e,c);c.remove();});
+    modal.classList.remove('on');document.body.classList.remove('bento-lock');openG=null;marks=[];
+  }
+  window.bentoOpen=function(key){var g=cards.filter(function(x){return x.key===key;})[0];if(g)open(g);};window.bentoClose=close;
+  function init(){
+    build();
+    var rb=window.runBatchCapture;
+    if(typeof rb==='function') window.runBatchCapture=async function(){document.body.classList.add('bento-all');try{return await rb.apply(this,arguments);}finally{document.body.classList.remove('bento-all');}};
+    // ปุ่ม/ฟังก์ชันที่เลื่อนไปหา section (ถ้ามี) ให้เปิดการ์ดนั้นแทน
+  }
+  if(document.readyState==='complete') setTimeout(init,0); else window.addEventListener('load',function(){setTimeout(init,0);});
+})();
+</script>
 </body>
 </html>
